@@ -128,19 +128,29 @@ verifier. `pnpm dev` against the real services only needs the variables in
 
 ## Deploying to Vercel
 
-The repo is pushed to `github.com/originalFactor/resuki-nic`, so the shortest
-path is git integration:
+The repo is at `github.com/originalFactor/resuki-nic`, so use Vercel's git
+integration — every later push to `main` redeploys.
 
-1. Import the repository into Vercel (framework preset: Next.js; no build
-   settings to change).
-2. Add environment variables from `.env.example` (production scope). Generate
-   `SESSION_SECRET` with `openssl rand -base64 48`, install a KV store, and
-   paste the Cloudflare token.
-3. Set `APP_ORIGIN` to the production URL so the callback/redirect URLs handed
-   to the verifier, and the cookies, all agree on one origin.
-4. Ensure the parent zone (`resukisu.org`) is in the Cloudflare account and the
-   token has `DNS:Edit` + `Zone:Read` on it.
-5. Deploy; every later push to `main` redeploys.
+1. **Import the repo.** Vercel → Add New → Project → `originalFactor/resuki-nic`.
+   Framework preset is detected as Next.js; no build settings to change.
+2. **Add a KV store.** In the project's Storage tab, add **Upstash Redis** from
+   the Marketplace and connect it to the project. It injects
+   `KV_REST_API_URL` + `KV_REST_API_TOKEN`, which is exactly what the app reads —
+   no code change and nothing to copy by hand.
+3. **Set the remaining environment variables** (production scope), all from
+   `.env.example`:
+
+   | Variable | Value |
+   | --- | --- |
+   | `SESSION_SECRET` | `openssl rand -base64 48` |
+   | `CLOUDFLARE_API_TOKEN` | token with `Zone:DNS:Edit` + `Zone:Zone:Read` on `resukisu.org` |
+   | `APP_ORIGIN` | the production URL, e.g. `https://resuki-nic.vercel.app` |
+   | `GITHUB_TOKEN` | optional but recommended (60 → 5000 requests/hour) |
+
+   `CF_ZONE` defaults to `resukisu.org`; set it if the parent differs.
+4. **Deploy.** Then open `/api/health` on the deployment — it reports exactly
+   what is configured and what is missing, and returns 200 only when the app is
+   ready to register domains.
 
 Without git integration, the CLI works too:
 
