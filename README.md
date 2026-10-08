@@ -128,14 +128,30 @@ verifier. `pnpm dev` against the real services only needs the variables in
 
 ## Deploying to Vercel
 
+The repo is pushed to `github.com/originalFactor/resuki-nic`, so the shortest
+path is git integration:
+
 1. Import the repository into Vercel (framework preset: Next.js; no build
    settings to change).
-2. Add environment variables from `.env.example`.
-3. Ensure the parent zone (`resukisu.org`) is in the Cloudflare account and the
+2. Add environment variables from `.env.example` (production scope). Generate
+   `SESSION_SECRET` with `openssl rand -base64 48`, install a KV store, and
+   paste the Cloudflare token.
+3. Set `APP_ORIGIN` to the production URL so the callback/redirect URLs handed
+   to the verifier, and the cookies, all agree on one origin.
+4. Ensure the parent zone (`resukisu.org`) is in the Cloudflare account and the
    token has `DNS:Edit` + `Zone:Read` on it.
-4. Set `APP_ORIGIN` to the production URL so the callback/redirect URLs handed
-   to the verifier are absolute and stable.
-5. Deploy.
+5. Deploy; every later push to `main` redeploys.
+
+Without git integration, the CLI works too:
+
+```bash
+pnpm dlx vercel link --repo            # links to the Vercel project
+pnpm dlx vercel env add SESSION_SECRET production
+pnpm dlx vercel --prod                 # or omit --prod for a preview
+```
+
+`pnpm dlx vercel deploy --help` lists the rest; `vercel env ls` audits what is
+configured.
 
 No DNS records need to exist before the first registration, and the parent
 zone's own nameservers do not change: a delegated name only needs the NS
@@ -147,6 +163,7 @@ than Edge.
 
 ### Verifier allow-list
 
-The verifier refuses callbacks to hosts it cannot resolve to a public address.
-If it runs with `EXTERNAL_CALLBACK_ALLOWED_HOSTS` set, add the production host
-there.
+The verifier refuses callbacks to hosts it cannot resolve to a public address
+(verified by probing the live endpoint). A public Vercel URL resolves fine. If
+the verifier runs with `EXTERNAL_CALLBACK_ALLOWED_HOSTS` set, add the
+production host there.
